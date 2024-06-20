@@ -12,6 +12,8 @@ const App = () => {
   const [displayMessages, setDisplayMessages] = useState([]);
   const [users, setUsers] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [notification, setNotification] = useState("");
+  const [messageHistory, setMessageHistory] = useState([]);
 
   const register = async () => {
     try {
@@ -57,20 +59,34 @@ const App = () => {
         ...prevMessages,
         `${data.sender}: ${data.message}`,
       ]);
+      if (data.sender === recipient) {
+        setMessageHistory((prevHistory) => [...prevHistory, data.message]);
+      }
     });
 
     socket.on("update_user_list", (users) => {
       setUsers(users);
     });
 
+    socket.on("show_notification", (sender) => {
+      setNotification(`${sender} sent you a message`);
+    });
+
     return () => {
       socket.off("received_private_message");
       socket.off("update_user_list");
+      socket.off("show_notification");
     };
-  }, []);
+  }, [recipient]);
 
   const isOnline = (user) => {
     return users.includes(user);
+  };
+
+  const handleNotificationClick = () => {
+    alert(messageHistory.join("\n"));
+    setMessageHistory([]);
+    setNotification("");
   };
 
   if (!isLoggedIn) {
@@ -138,6 +154,11 @@ const App = () => {
       </div>
       <div className="footer">
         <p>Logged in as: {username}</p>
+        {notification && (
+          <div className="notification" onClick={handleNotificationClick}>
+            {notification}
+          </div>
+        )}
       </div>
     </div>
   );
